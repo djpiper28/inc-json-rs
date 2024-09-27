@@ -1,0 +1,7 @@
+[package]
+name = "inc-json-rs"
+version = "0.1.0"
+edition = "2021"
+author = ["Danny Piper <djpiper28@gmail.com>"]
+
+[dependencies]
