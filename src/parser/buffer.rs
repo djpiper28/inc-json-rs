@@ -1,14 +1,17 @@
+use super::json_path::JsonPath;
 use std::string::String;
 
 struct Buffer {
-    tmp_buffer: String,
+    buffer: String,
+    current_path: JsonPath,
 }
 
 impl Buffer {
     pub fn new() -> Self {
         println!("uwu");
         Buffer {
-            tmp_buffer: String::new(),
+            buffer: String::new(),
+            current_path: Vec::new(),
         }
     }
 }
