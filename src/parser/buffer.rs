@@ -20,16 +20,17 @@ impl Buffer {
         }
     }
 
-    pub fn add_data(mut self, data: BufferChunk) -> Result<Buffer, &'static str> {
+    pub fn add_data(&mut self, data: BufferChunk) -> Result<(), &'static str> {
         if self.eof {
             return Result::Err("Cannot add data once the EOF has occurred");
         }
 
         self.buffers.push(data);
-        Ok(self)
+        Result::Ok(())
     }
 
-    pub fn eof(mut self) {
+    /// Called when at the end of the buffer.
+    pub fn eof(&mut self) {
         self.eof = true;
     }
 }
@@ -37,4 +38,13 @@ impl Buffer {
 #[cfg(test)]
 mod test_buffer {
     use super::*;
+
+    #[test]
+    fn test_cannot_add_data_after_eof() {
+        let mut buffer = Buffer::new();
+        buffer.eof();
+
+        let err = buffer.add_data(Vec::new());
+        assert!(err.is_err(), "Should be in an error state");
+    }
 }
