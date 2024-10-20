@@ -1,5 +1,3 @@
-use std::string::String;
-
 const BOOLEAN_TRUE: &str = "true";
 const BOOLEAN_FALSE: &str = "false";
 
