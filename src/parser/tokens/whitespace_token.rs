@@ -1,9 +1,6 @@
 pub fn is_whitespace(c: char) -> bool {
     match c {
-        '\n' => true,
-        '\r' => true,
-        '\t' => true,
-        ' ' => true,
+        '\n' | '\r' | '\t' | ' ' => true,
         _ => false,
     }
 }
