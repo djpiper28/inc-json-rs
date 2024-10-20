@@ -1,20 +1,40 @@
 use super::json_path::JsonPath;
-use std::string::String;
 
+pub type BufferChunk = Vec<char>;
+
+/// Stores a buffer of incoming characters as a vector of strings (in `Vec<char>` form).
 pub struct Buffer {
-    buffer: String,
+    buffers: Vec<BufferChunk>,
     current_path: JsonPath,
     /// Whether or not there is more data to be expected after the end of the buffer.
-    more_data: bool,
+    eof: bool,
 }
 
 impl Buffer {
     pub fn new() -> Self {
         println!("uwu");
         Buffer {
-            buffer: String::new(),
+            buffers: Vec::new(),
             current_path: Vec::new(),
-            more_data: true,
+            eof: false,
         }
     }
+
+    pub fn add_data(mut self, data: BufferChunk) -> Result<Buffer, &'static str> {
+        if self.eof {
+            return Result::Err("Cannot add data once the EOF has occurred");
+        }
+
+        self.buffers.push(data);
+        Ok(self)
+    }
+
+    pub fn eof(mut self) {
+        self.eof = true;
+    }
+}
+
+#[cfg(test)]
+mod test_buffer {
+    use super::*;
 }
