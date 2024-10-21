@@ -11,6 +11,11 @@ pub enum Tokens {
     Boolean(bool),
     Number(NumberToken),
     String(StringToken),
-    // Object(Object),
-    // Array(Array),
+    ObjectStart,
+    ObjectEnd,
+    /// The colon (:) that makes up the "key": "value" of an object entry
+    ObejectValueIndicator,
+    ArrayStart,
+    ArrayEnd,
+    Comma,
 }
