@@ -1,6 +1,6 @@
 use std::char;
 
-use crate::parser::{buffer::Buffer, tokens::string_token::StringToken};
+use crate::parser::{buffer::Buffer, lexer::tokens::string_token::StringToken};
 
 pub fn is_first_char_of_string(c: char) -> bool {
     match c {
