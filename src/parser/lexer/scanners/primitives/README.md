@@ -1,4 +1,4 @@
-# JSON Primitives And How To Parse Them
+# JSON Primitive Scanners
 
 JSON primitive types are:
 
@@ -6,5 +6,3 @@ JSON primitive types are:
 - number
 - string
 - null
-
-They are also used within objects, and arrays, which are parsed in a different module.
