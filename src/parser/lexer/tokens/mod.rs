@@ -5,7 +5,7 @@ pub mod number_token;
 pub mod string_token;
 pub mod whitespace_token;
 
-pub enum Tokens {
+pub enum JsonToken {
     Whitespace,
     Null,
     Boolean(bool),

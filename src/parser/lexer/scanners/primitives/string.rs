@@ -1,6 +1,8 @@
+use crate::parser::{buffer::Buffer, lexer::tokens::string_token::StringToken};
 use std::char;
 
-use crate::parser::{buffer::Buffer, lexer::tokens::string_token::StringToken};
+/// The maximum string length is a Gigabyte so that really long valid strings will terminate.
+const MAX_READ_LENGTH: usize = 1024 * 1024 * 1024;
 
 pub fn is_first_char_of_string(c: char) -> bool {
     match c {
@@ -13,15 +15,22 @@ pub struct StringParsingState {
     token: StringToken,
 }
 
-enum ParsingCharResult {
+enum ScannedCharType {
     NormalCharacter,
     EscapedCharacter,
+    StringEnd,
 }
 
-fn char_type(c: char) -> ParsingCharResult {
+enum CharScanResult {
+    Ok,
+    EndOfToken,
+    Err(&'static str),
+}
+
+fn char_type(c: char) -> ScannedCharType {
     return match c {
-        '\\' => ParsingCharResult::EscapedCharacter,
-        _ => ParsingCharResult::NormalCharacter,
+        '\\' => ScannedCharType::EscapedCharacter,
+        _ => ScannedCharType::NormalCharacter,
     };
 }
 
@@ -32,7 +41,7 @@ impl StringParsingState {
         };
     }
 
-    fn parse_unicode_escape_sequence(mut self, mut buffer: Buffer) -> Result<(), &'static str> {
+    fn parse_unicode_escape_sequence(&mut self, buffer: &mut Buffer) -> Result<(), &'static str> {
         let mut c: u32 = 0;
 
         for i in 0..4 {
@@ -67,7 +76,7 @@ impl StringParsingState {
         }
     }
 
-    fn parse_escape_sequence(mut self, mut buffer: Buffer) -> Result<(), &'static str> {
+    fn parse_escape_sequence(&mut self, buffer: &mut Buffer) -> Result<(), &'static str> {
         match buffer.next_char() {
             Err(x) => Err(x),
             Ok(first_char) => {
@@ -117,18 +126,45 @@ impl StringParsingState {
         }
     }
 
-    pub fn parse(mut self, mut buffer: Buffer) -> Result<(), &'static str> {
-        match buffer.next_char() {
-            Err(x) => Err(x),
-            Ok(c) => match char_type(c) {
-                ParsingCharResult::NormalCharacter => {
-                    self.token.add_char(c);
-                    return Ok(());
+    fn scan_char(&mut self, c: char, buffer: &mut Buffer) -> CharScanResult {
+        match char_type(c) {
+            ScannedCharType::NormalCharacter => {
+                self.token.add_char(c);
+                return CharScanResult::Ok;
+            }
+            ScannedCharType::EscapedCharacter => match self.parse_escape_sequence(buffer) {
+                Err(x) => {
+                    return CharScanResult::Err(x);
                 }
-                ParsingCharResult::EscapedCharacter => {
-                    return self.parse_escape_sequence(buffer);
-                }
+                Ok(()) => CharScanResult::Ok,
             },
+            ScannedCharType::StringEnd => CharScanResult::EndOfToken,
         }
+    }
+
+    pub fn scan_token(&mut self, buffer: &mut Buffer) -> Result<StringToken, &'static str> {
+        for _ in 0..MAX_READ_LENGTH {
+            let scan_result = match buffer.next_char() {
+                Err(x) => Err(x),
+                Ok(c) => Ok(self.scan_char(c, buffer)),
+            };
+
+            let return_val: Option<Result<StringToken, &'static str>>;
+            match scan_result {
+                Ok(CharScanResult::Err(x)) | Err(x) => {
+                    return_val = Some(Err(x));
+                }
+                Ok(CharScanResult::EndOfToken) => {
+                    return_val = Some(Ok(self.token.clone()));
+                }
+                Ok(CharScanResult::Ok) => return_val = None,
+            };
+
+            if return_val.is_some() {
+                return return_val.unwrap();
+            }
+        }
+
+        return Err("Exceeded maximum length");
     }
 }

@@ -1,5 +1,6 @@
 use std::string::String;
 
+#[derive(Clone)]
 pub struct StringToken {
     value: Vec<char>,
 }
