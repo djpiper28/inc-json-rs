@@ -12,5 +12,7 @@ There are many types of token:
 - Object value indicator token (`:`)
 - Item separator token (`,`)
 
+The scanners for said types of tokens are within the scanners module.
+
 The parsing then processes the stream of tokens and starts to callback parts of the resulting
 JSON structure as they are parsed.
