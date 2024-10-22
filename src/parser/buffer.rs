@@ -36,12 +36,16 @@ impl Buffer {
         self.eof = true;
     }
 
-    fn next_buffer(&mut self) {
+    async fn next_buffer(&mut self) {
         self.current_buffer_idx = 0;
         self.buffers.remove(0);
     }
 
     pub fn next_char(&mut self) -> Result<char, &'static str> {
+        if self.eof {
+            return Err("EOF reached");
+        }
+
         return match self.buffers.first() {
             Some(buffer) => {
                 if self.current_buffer_idx >= buffer.len() {
