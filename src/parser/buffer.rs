@@ -36,7 +36,7 @@ impl Buffer {
         self.eof = true;
     }
 
-    async fn next_buffer(&mut self) {
+    fn next_buffer(&mut self) {
         self.current_buffer_idx = 0;
         self.buffers.remove(0);
     }
