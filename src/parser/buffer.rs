@@ -88,7 +88,6 @@ impl Buffer {
 #[cfg(test)]
 mod test_buffer {
     use std::borrow::BorrowMut;
-
     use super::*;
 
     #[tokio::test]
