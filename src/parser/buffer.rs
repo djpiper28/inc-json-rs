@@ -7,7 +7,7 @@ pub type BufferChunk = Vec<char>;
 
 /// Stores a buffer of incoming characters as a vector of strings (in `Vec<char>` form).
 pub struct Buffer {
-    buffers: Vec<BufferChunk>,
+    buffers: Mutex<Vec<BufferChunk>>,
     current_buffer_idx: usize,
     current_path: JsonPath,
     /// Whether or not there is more data to be expected after the end of the buffer.
@@ -92,7 +92,7 @@ mod test_buffer {
     }
 
     #[tokio::test]
-    async fn test_new_char_single_buffer_long() {
+    async fn test_next_char_single_buffer_long() {
         let mut buf = Buffer::new();
         let mut buffer = Box::pin(buf.borrow_mut());
         buffer
@@ -106,4 +106,50 @@ mod test_buffer {
         let c2 = buffer.next_char().await.unwrap();
         assert_eq!(c2, 'e');
     }
+
+    #[tokio::test]
+    async fn test_next_char_many_buffers() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer
+            .add_data(vec!['h'])
+            .await
+            .unwrap();
+
+        buffer
+            .add_data(vec!['e'])
+            .await
+            .unwrap();
+
+        let c1 = buffer.next_char().await.unwrap();
+        assert_eq!(c1, 'h');
+
+        let c2 = buffer.next_char().await.unwrap();
+        assert_eq!(c2, 'e');
+    }
+    
+    // #[tokio::test]
+    // async fn test_next_char_many_buffers_with_wait() {
+    //     let mut buf = Buffer::new();
+    //
+    //     let mut buffer = Box::pin(buf.borrow_mut());
+    //     buffer
+    //         .add_data(vec!['h'])
+    //         .await
+    //         .unwrap();
+    //
+    //     let mut buffer = Box::pin(buf.borrow_mut());
+    //     let c1 = buffer.next_char().await.unwrap();
+    //     assert_eq!(c1, 'h');
+    //
+    //     let c2_future = buffer.next_char();
+    //
+    //     buffer
+    //         .add_data(vec!['e'])
+    //         .await
+    //         .unwrap();
+    //
+    //     let c2 = c2_future.await.unwrap();
+    //     assert_eq!(c2, 'e');
+    // }
 }
