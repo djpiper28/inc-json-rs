@@ -60,7 +60,7 @@ impl Buffer {
             }
 
             let buffer = data.buffers.first();
-            let has_buffer = match (buffer) {
+            let has_buffer = match buffer {
                 Some(b) => data.current_buffer_idx >= b.len(),
                 None => false,
             };
