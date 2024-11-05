@@ -60,7 +60,7 @@ impl Buffer {
             return Err("EOF reached");
         }
 
-        return match self.buffers.first() {
+        return match self.buffers.lock().await.first() {
             Some(buffer) => {
                 if self.current_buffer_idx >= buffer.len() {
                     self.next_buffer().await;
