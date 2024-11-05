@@ -1,6 +1,6 @@
 use super::json_path::JsonPath;
 use core::panic;
-use std::{future::Future, pin::Pin};
+use std::pin::Pin;
 use tokio::sync::Semaphore;
 
 pub type BufferChunk = Vec<char>;
@@ -80,12 +80,12 @@ impl Buffer {
 mod test_buffer {
     use super::*;
 
-    #[test]
-    fn test_cannot_add_data_after_eof() {
+    #[tokio::test]
+    async fn test_cannot_add_data_after_eof() {
         let mut buffer = Buffer::new();
-        buffer.eof();
+        buffer.eof().await;
 
-        let err = buffer.add_data(Box::pin(Vec::new())).await;
+        let err = buffer.add_data(Vec::new()).await;
         assert!(err.is_err(), "Should be in an error state");
     }
 }
