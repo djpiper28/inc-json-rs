@@ -1,4 +1,4 @@
-use super::tokens::{string_token::StringToken, JsonToken};
+use super::tokens::JsonToken;
 use crate::parser::buffer::Buffer;
 use array::{is_first_char_of_array_end, is_first_char_of_array_start};
 use common::is_first_char_of_comma;
@@ -12,13 +12,18 @@ use primitives::{
     number::is_first_char_of_number,
     string::{is_first_char_of_string, StringParsingState},
 };
+use std::boxed::Box;
+use std::{borrow::Borrow, pin::Pin};
 
 pub mod array;
 pub mod common;
 pub mod object;
 pub mod primitives;
 
-fn scan_token(c: char, buffer: &mut Buffer) -> Result<JsonToken, &'static str> {
+async fn scan_token(
+    c: char,
+    buffer: &mut Pin<Box<&mut Buffer>>,
+) -> Result<JsonToken, &'static str> {
     if is_first_char_of_object_start(c) {
         return Ok(JsonToken::ObjectStart);
     } else if is_first_char_of_object_end(c) {
@@ -39,7 +44,7 @@ fn scan_token(c: char, buffer: &mut Buffer) -> Result<JsonToken, &'static str> {
         todo!("Check that is is actually a number, and what it is");
     } else if is_first_char_of_string(c) {
         let mut string_scanner = StringParsingState::new();
-        return match string_scanner.scan_token(buffer) {
+        return match string_scanner.scan_token(buffer).await {
             Ok(x) => Ok(JsonToken::String(x)),
             Err(x) => Err(x),
         };
@@ -48,10 +53,10 @@ fn scan_token(c: char, buffer: &mut Buffer) -> Result<JsonToken, &'static str> {
     }
 }
 
-pub fn next_token(mut buffer: &mut Buffer) -> Result<JsonToken, &'static str> {
-    match buffer.next_char() {
+pub async fn next_token(buffer: &mut Pin<Box<&mut Buffer>>) -> Result<JsonToken, &'static str> {
+    match buffer.next_char().await {
         Ok(c) => {
-            return scan_token(c, buffer);
+            return scan_token(c, buffer).await;
         }
         Err(x) => Err(x),
     }

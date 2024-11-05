@@ -1,5 +1,5 @@
 use crate::parser::{buffer::Buffer, lexer::tokens::string_token::StringToken};
-use std::char;
+use std::{borrow::BorrowMut, char, pin::Pin};
 
 /// The maximum string length is a Gigabyte so that really long valid strings will terminate.
 const MAX_READ_LENGTH: usize = 1024 * 1024 * 1024;
@@ -41,7 +41,10 @@ impl StringParsingState {
         };
     }
 
-    fn parse_unicode_escape_sequence(&mut self, buffer: &mut Buffer) -> Result<(), &'static str> {
+    async fn parse_unicode_escape_sequence(
+        &mut self,
+        buffer: &mut Pin<Box<&mut Buffer>>,
+    ) -> Result<(), &'static str> {
         let mut c: u32 = 0;
 
         for i in 0..4 {
@@ -51,7 +54,7 @@ impl StringParsingState {
             //       3 -> 0
             let offset = 4 - i - 1;
 
-            let res: Result<(), &'static str> = match buffer.next_char() {
+            let res: Result<(), &'static str> = match buffer.next_char().await {
                 Err(x) => Err(x),
                 Ok(next_char) => match u32::from_str_radix(next_char.to_string().as_str(), 16) {
                     Err(_) => Err("Invalid hex digit in unicode escape sequence"),
@@ -76,13 +79,16 @@ impl StringParsingState {
         }
     }
 
-    fn parse_escape_sequence(&mut self, buffer: &mut Buffer) -> Result<(), &'static str> {
-        match buffer.next_char() {
+    async fn parse_escape_sequence(
+        &mut self,
+        buffer: &mut Pin<Box<&mut Buffer>>,
+    ) -> Result<(), &'static str> {
+        match buffer.next_char().await {
             Err(x) => Err(x),
             Ok(first_char) => {
                 match first_char {
                     'u' => {
-                        return self.parse_unicode_escape_sequence(buffer);
+                        return self.parse_unicode_escape_sequence(buffer).await;
                     }
                     '"' => {
                         self.token.add_char('"');
@@ -126,13 +132,13 @@ impl StringParsingState {
         }
     }
 
-    fn scan_char(&mut self, c: char, buffer: &mut Buffer) -> CharScanResult {
+    async fn scan_char(&mut self, c: char, buffer: &mut Pin<Box<&mut Buffer>>) -> CharScanResult {
         match char_type(c) {
             ScannedCharType::NormalCharacter => {
                 self.token.add_char(c);
                 return CharScanResult::Ok;
             }
-            ScannedCharType::EscapedCharacter => match self.parse_escape_sequence(buffer) {
+            ScannedCharType::EscapedCharacter => match self.parse_escape_sequence(buffer).await {
                 Err(x) => {
                     return CharScanResult::Err(x);
                 }
@@ -142,11 +148,14 @@ impl StringParsingState {
         }
     }
 
-    pub fn scan_token(&mut self, buffer: &mut Buffer) -> Result<StringToken, &'static str> {
+    pub async fn scan_token(
+        &mut self,
+        buffer: &mut Pin<Box<&mut Buffer>>,
+    ) -> Result<StringToken, &'static str> {
         for _ in 0..MAX_READ_LENGTH {
-            let scan_result = match buffer.next_char() {
+            let scan_result = match buffer.next_char().await {
                 Err(x) => Err(x),
-                Ok(c) => Ok(self.scan_char(c, buffer)),
+                Ok(c) => Ok(self.scan_char(c, buffer).await),
             };
 
             let return_val: Option<Result<StringToken, &'static str>>;

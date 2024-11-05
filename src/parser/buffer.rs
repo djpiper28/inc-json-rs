@@ -1,6 +1,7 @@
+use super::json_path::JsonPath;
+use core::panic;
 use std::{future::Future, pin::Pin};
 use tokio::sync::Semaphore;
-use super::json_path::JsonPath;
 
 pub type BufferChunk = Vec<char>;
 
@@ -44,12 +45,17 @@ impl Buffer {
     }
 
     async fn next_buffer(&mut self) {
-        self.sem.acquire().await;
+        match self.sem.acquire().await {
+            Ok(_) => {}
+            Err(_) => {
+                panic!("Illegal State");
+            }
+        };
         self.current_buffer_idx = 0;
         self.buffers.remove(0);
     }
 
-    pub async fn next_char(mut self: Pin<&mut Self>) -> Result<char, &'static str> {
+    pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
         if self.eof {
             return Err("EOF reached");
         }
@@ -79,7 +85,7 @@ mod test_buffer {
         let mut buffer = Buffer::new();
         buffer.eof();
 
-        let err = buffer.add_data(Vec::new());
+        let err = buffer.add_data(Box::pin(Vec::new())).await;
         assert!(err.is_err(), "Should be in an error state");
     }
 }
