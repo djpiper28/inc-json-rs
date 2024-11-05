@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+use tokio::sync::Semaphore;
 use super::json_path::JsonPath;
 
 pub type BufferChunk = Vec<char>;
@@ -9,6 +11,7 @@ pub struct Buffer {
     current_path: JsonPath,
     /// Whether or not there is more data to be expected after the end of the buffer.
     eof: bool,
+    sem: Semaphore,
 }
 
 impl Buffer {
@@ -19,29 +22,34 @@ impl Buffer {
             current_path: Vec::new(),
             current_buffer_idx: 0,
             eof: false,
+            sem: Semaphore::new(0),
         }
     }
 
-    pub fn add_data(&mut self, data: BufferChunk) -> Result<(), &'static str> {
+    pub async fn add_data(&mut self, data: BufferChunk) -> Result<(), &'static str> {
         if self.eof {
             return Result::Err("Cannot add data once the EOF has occurred");
         }
 
         self.buffers.push(data);
+        self.sem.add_permits(1);
         Result::Ok(())
     }
 
     /// Called when at the end of the buffer.
-    pub fn eof(&mut self) {
+    pub async fn eof(&mut self) {
         self.eof = true;
+        self.sem.add_permits(1);
+        self.sem.close();
     }
 
-    fn next_buffer(&mut self) {
+    async fn next_buffer(&mut self) {
+        self.sem.acquire().await;
         self.current_buffer_idx = 0;
         self.buffers.remove(0);
     }
 
-    pub fn next_char(&mut self) -> Result<char, &'static str> {
+    pub async fn next_char(mut self: Pin<&mut Self>) -> Result<char, &'static str> {
         if self.eof {
             return Err("EOF reached");
         }
@@ -49,8 +57,8 @@ impl Buffer {
         return match self.buffers.first() {
             Some(buffer) => {
                 if self.current_buffer_idx >= buffer.len() {
-                    self.next_buffer();
-                    return self.next_char();
+                    self.next_buffer().await;
+                    return Box::pin(self.next_char()).await;
                 }
 
                 let c = buffer[self.current_buffer_idx];

@@ -5,3 +5,4 @@ edition = "2021"
 author = ["Danny Piper <djpiper28@gmail.com>"]
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }

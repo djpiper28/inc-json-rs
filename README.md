@@ -1,4 +1,4 @@
-# `inc-json-rs` An Incremental JSON Parser
+# `inc-json-rs` An Incremental JSON Parser That Uses Tokio
 
 CURRENT A WIP.
 
