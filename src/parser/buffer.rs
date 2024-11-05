@@ -66,7 +66,7 @@ impl Buffer {
     }
 
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
-        let data = self.data.lock().await;
+        let mut data = self.data.lock().await;
         if data.eof {
             return Err("EOF reached");
         }
