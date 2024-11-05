@@ -1,7 +1,7 @@
 use super::json_path::JsonPath;
 use core::panic;
 use std::pin::Pin;
-use tokio::sync::Semaphore;
+use tokio::sync::{Mutex, Semaphore};
 
 pub type BufferChunk = Vec<char>;
 
@@ -19,7 +19,7 @@ impl Buffer {
     pub fn new() -> Self {
         println!("uwu");
         Buffer {
-            buffers: Vec::new(),
+            buffers: Mutex::new(Vec::new()),
             current_path: Vec::new(),
             current_buffer_idx: 0,
             eof: false,
@@ -32,7 +32,7 @@ impl Buffer {
             return Result::Err("Cannot add data once the EOF has occurred");
         }
 
-        self.buffers.push(data);
+        self.buffers.lock().await.push(data);
         self.sem.add_permits(1);
         Result::Ok(())
     }
@@ -52,7 +52,7 @@ impl Buffer {
             }
         };
         self.current_buffer_idx = 0;
-        self.buffers.remove(0);
+        self.buffers.lock().await.remove(0);
     }
 
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
