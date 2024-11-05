@@ -78,6 +78,8 @@ impl Buffer {
 
 #[cfg(test)]
 mod test_buffer {
+    use std::borrow::BorrowMut;
+
     use super::*;
 
     #[tokio::test]
@@ -87,5 +89,21 @@ mod test_buffer {
 
         let err = buffer.add_data(Vec::new()).await;
         assert!(err.is_err(), "Should be in an error state");
+    }
+
+    #[tokio::test]
+    async fn test_new_char_single_buffer_long() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer
+            .add_data(vec!['h', 'e', 'l', 'l', 'o'])
+            .await
+            .unwrap();
+
+        let c1 = buffer.next_char().await.unwrap();
+        assert_eq!(c1, 'h');
+
+        let c2 = buffer.next_char().await.unwrap();
+        assert_eq!(c2, 'e');
     }
 }
