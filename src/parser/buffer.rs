@@ -52,38 +52,36 @@ impl Buffer {
         self.sem.close();
     }
 
-    async fn next_buffer(&mut self) {
-        match self.sem.acquire().await {
-            Ok(_) => {}
-            Err(_) => {
-                panic!("Illegal State");
-            }
-        };
-
-        let mut data = self.data.lock().await;
-        data.current_buffer_idx = 0;
-        data.buffers.remove(0);
-    }
-
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
-        let mut data = self.data.lock().await;
-        if data.eof {
-            return Err("EOF reached");
-        }
-
-        return match data.buffers.first() {
-            Some(buffer) => {
-                if data.current_buffer_idx >= buffer.len() {
-                    self.next_buffer().await;
-                    return Box::pin(self.next_char()).await;
-                }
-
-                let c = buffer[data.current_buffer_idx];
-                data.current_buffer_idx += 1;
-                return Ok(c);
+        loop {
+            let mut data = self.data.lock().await;
+            if data.eof {
+                return Err("EOF reached");
             }
-            None => Err("There are no more buffers to get characters from"),
-        };
+
+            let buffer = data.buffers.first();
+            let has_buffer = match (buffer) {
+                Some(b) => data.current_buffer_idx >= b.len(),
+                None => false,
+            };
+
+            if has_buffer {
+                match self.sem.acquire().await {
+                    Ok(_) => {}
+                    Err(_) => {
+                        panic!("Illegal State");
+                    }
+                };
+
+                data.current_buffer_idx = 0;
+                data.buffers.remove(0);
+                continue;
+            }
+
+            let c = buffer.unwrap()[data.current_buffer_idx];
+            data.current_buffer_idx += 1;
+            return Ok(c);
+        }
     }
 }
 
