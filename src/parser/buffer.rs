@@ -7,39 +7,47 @@ pub type BufferChunk = Vec<char>;
 
 /// Stores a buffer of incoming characters as a vector of strings (in `Vec<char>` form).
 pub struct Buffer {
-    buffers: Mutex<Vec<BufferChunk>>,
+    sem: Semaphore,
+    data: Mutex<BufferInternalData>,
+}
+
+struct BufferInternalData {
+    buffers: Vec<BufferChunk>,
     current_buffer_idx: usize,
     current_path: JsonPath,
     /// Whether or not there is more data to be expected after the end of the buffer.
     eof: bool,
-    sem: Semaphore,
 }
 
 impl Buffer {
     pub fn new() -> Self {
         println!("uwu");
         Buffer {
-            buffers: Mutex::new(Vec::new()),
-            current_path: Vec::new(),
-            current_buffer_idx: 0,
-            eof: false,
+            data: Mutex::new(BufferInternalData {
+                buffers: Vec::new(),
+                current_path: Vec::new(),
+                current_buffer_idx: 0,
+                eof: false,
+            }),
             sem: Semaphore::new(0),
         }
     }
 
-    pub async fn add_data(&mut self, data: BufferChunk) -> Result<(), &'static str> {
-        if self.eof {
+    /// Adds a chunk of data to the buffer
+    pub async fn add_data(&mut self, chunk: BufferChunk) -> Result<(), &'static str> {
+        let mut data = self.data.lock().await;
+        if data.eof {
             return Result::Err("Cannot add data once the EOF has occurred");
         }
 
-        self.buffers.lock().await.push(data);
+        data.buffers.push(chunk);
         self.sem.add_permits(1);
         Result::Ok(())
     }
 
     /// Called when at the end of the buffer.
     pub async fn eof(&mut self) {
-        self.eof = true;
+        self.data.lock().await.eof = true;
         self.sem.add_permits(1);
         self.sem.close();
     }
@@ -51,24 +59,27 @@ impl Buffer {
                 panic!("Illegal State");
             }
         };
-        self.current_buffer_idx = 0;
-        self.buffers.lock().await.remove(0);
+
+        let mut data = self.data.lock().await;
+        data.current_buffer_idx = 0;
+        data.buffers.remove(0);
     }
 
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
-        if self.eof {
+        let data = self.data.lock().await;
+        if data.eof {
             return Err("EOF reached");
         }
 
-        return match self.buffers.lock().await.first() {
+        return match data.buffers.first() {
             Some(buffer) => {
-                if self.current_buffer_idx >= buffer.len() {
+                if data.current_buffer_idx >= buffer.len() {
                     self.next_buffer().await;
                     return Box::pin(self.next_char()).await;
                 }
 
-                let c = buffer[self.current_buffer_idx];
-                self.current_buffer_idx += 1;
+                let c = buffer[data.current_buffer_idx];
+                data.current_buffer_idx += 1;
                 return Ok(c);
             }
             None => Err("There are no more buffers to get characters from"),
@@ -111,15 +122,9 @@ mod test_buffer {
     async fn test_next_char_many_buffers() {
         let mut buf = Buffer::new();
         let mut buffer = Box::pin(buf.borrow_mut());
-        buffer
-            .add_data(vec!['h'])
-            .await
-            .unwrap();
+        buffer.add_data(vec!['h']).await.unwrap();
 
-        buffer
-            .add_data(vec!['e'])
-            .await
-            .unwrap();
+        buffer.add_data(vec!['e']).await.unwrap();
 
         let c1 = buffer.next_char().await.unwrap();
         assert_eq!(c1, 'h');
@@ -127,7 +132,7 @@ mod test_buffer {
         let c2 = buffer.next_char().await.unwrap();
         assert_eq!(c2, 'e');
     }
-    
+
     // #[tokio::test]
     // async fn test_next_char_many_buffers_with_wait() {
     //     let mut buf = Buffer::new();
