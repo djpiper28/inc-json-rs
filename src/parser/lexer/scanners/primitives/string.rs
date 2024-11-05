@@ -1,5 +1,5 @@
 use crate::parser::{buffer::Buffer, lexer::tokens::string_token::StringToken};
-use std::{borrow::BorrowMut, char, pin::Pin};
+use std::{char, pin::Pin};
 
 /// The maximum string length is a Gigabyte so that really long valid strings will terminate.
 const MAX_READ_LENGTH: usize = 1024 * 1024 * 1024;
