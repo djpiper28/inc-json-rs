@@ -87,8 +87,8 @@ impl Buffer {
 
 #[cfg(test)]
 mod test_buffer {
-    use std::borrow::BorrowMut;
     use super::*;
+    use std::borrow::BorrowMut;
 
     #[tokio::test]
     async fn test_cannot_add_data_after_eof() {

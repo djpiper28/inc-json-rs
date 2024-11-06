@@ -31,6 +31,7 @@ fn char_type(c: char) -> ScannedCharType {
     return match c {
         '\\' => ScannedCharType::EscapedCharacter,
         _ => ScannedCharType::NormalCharacter,
+        '"' => ScannedCharType::StringEnd,
     };
 }
 
