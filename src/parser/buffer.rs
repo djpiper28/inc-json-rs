@@ -60,12 +60,12 @@ impl Buffer {
             }
 
             let buffer = data.buffers.first();
-            let has_buffer = match buffer {
+            let at_end_of_current_buffer = match buffer {
                 Some(b) => data.current_buffer_idx >= b.len(),
                 None => false,
             };
 
-            if has_buffer {
+            if at_end_of_current_buffer {
                 match self.sem.acquire().await {
                     Ok(_) => {}
                     Err(_) => {
