@@ -1,5 +1,4 @@
-use core::panic;
-use std::pin::Pin;
+use std::{borrow::BorrowMut, pin::Pin};
 use tokio::sync::{Mutex, Semaphore};
 
 /// The buffer reads chunks of data at a time and adds it to an internal queue.
@@ -47,35 +46,41 @@ impl Buffer {
     pub async fn eof(&mut self) {
         self.data.lock().await.eof = true;
         self.sem.add_permits(1);
-        self.sem.close();
     }
 
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
         loop {
             let mut data = self.data.lock().await;
-            if data.eof {
-                return Err("EOF reached");
-            }
-
             let buffer = data.buffers.first();
             let at_end_of_current_buffer = match buffer {
                 Some(b) => data.current_buffer_idx >= b.len(),
-                None => false,
+                None => true,
             };
 
             if at_end_of_current_buffer {
+                if data.eof && data.buffers.is_empty() {
+                    return Err("EOF reached");
+                }
+
+                // Drop to prevent dead-lock
+                drop(data);
                 if self.sem.acquire().await.is_err() {
                     return Err("Cannot unlock semaphore - EOF probably");
                 }
 
+                let mut data = self.data.lock().await;
+                // The first buffer is the one that has been read fully
+                if data.eof && data.buffers.len() <= 1 {
+                    return Err("EOF reached");
+                }
+
                 data.current_buffer_idx = 0;
                 data.buffers.remove(0);
-                continue;
+            } else {
+                let c = buffer.unwrap()[data.current_buffer_idx];
+                data.current_buffer_idx += 1;
+                return Ok(c);
             }
-
-            let c = buffer.unwrap()[data.current_buffer_idx];
-            data.current_buffer_idx += 1;
-            return Ok(c);
         }
     }
 }
@@ -141,6 +146,31 @@ mod test_buffer {
 
         buffer.eof().await;
 
+        assert!(buffer.next_char().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_next_char_after_eof_errors_with_a_queue() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer.add_data(vec!['h']).await.unwrap();
+        buffer.add_data(vec!['e']).await.unwrap();
+        buffer.eof().await;
+
+        let c1 = buffer.next_char().await.unwrap();
+        assert_eq!(c1, 'h');
+
+        let c2 = buffer.next_char().await.unwrap();
+        assert_eq!(c2, 'e');
+
+        assert!(buffer.next_char().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_next_char_after_eof_errors_with_no_data() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer.eof().await;
         assert!(buffer.next_char().await.is_err());
     }
 
