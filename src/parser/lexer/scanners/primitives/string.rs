@@ -182,7 +182,6 @@ impl StringParsingState {
 #[cfg(test)]
 mod test_string {
     use std::borrow::BorrowMut;
-
     use super::*;
 
     #[tokio::test]
@@ -190,13 +189,14 @@ mod test_string {
         let mut buffer = Buffer::new();
 
         // This seems really convoluted to be hoenst
-        assert!(!buffer.add_data("\"Hello world!\"".to_string().chars().into_iter().clone().collect::<Vec<char>>()).await.is_err());
+        assert!(buffer.add_data("\"Hello world!\"".to_string().chars().into_iter().clone().collect::<Vec<char>>()).await.is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
 
         let mut string_parser = StringParsingState::new();
-        let res= string_parser.scan_token(buffer_pinned).await;
+        let res = string_parser.scan_token(buffer_pinned).await;
 
-        assert!(!res.is_err());
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().as_string(), "Hello world!");
     }
 }
