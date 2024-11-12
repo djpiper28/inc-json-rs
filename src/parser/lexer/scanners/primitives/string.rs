@@ -30,8 +30,8 @@ enum CharScanResult {
 fn char_type(c: char) -> ScannedCharType {
     return match c {
         '\\' => ScannedCharType::EscapedCharacter,
-        _ => ScannedCharType::NormalCharacter,
         '"' => ScannedCharType::StringEnd,
+        _ => ScannedCharType::NormalCharacter,
     };
 }
 
@@ -149,6 +149,10 @@ impl StringParsingState {
         }
     }
 
+    /// This reads from the first char of the string
+    /// For example `"abcdef..."`: `a` in the example is the first char
+    /// Until the end of the string. The first char is expected to be read from
+    /// `is_first_char_of_string()`
     pub async fn scan_token(
         &mut self,
         buffer: &mut Pin<Box<&mut Buffer>>,
@@ -181,17 +185,31 @@ impl StringParsingState {
 
 #[cfg(test)]
 mod test_string {
-    use std::borrow::BorrowMut;
     use super::*;
+    use std::borrow::BorrowMut;
 
     #[tokio::test]
     pub async fn test_string_scan_valid_base_case() {
         let mut buffer = Buffer::new();
 
         // This seems really convoluted to be hoenst
-        assert!(buffer.add_data("\"Hello world!\"".to_string().chars().into_iter().clone().collect::<Vec<char>>()).await.is_ok());
+        assert!(buffer
+            .add_data(
+                "\"Hello world!\""
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+
+        assert!(is_first_char_of_string(
+            buffer_pinned.next_char().await.unwrap()
+        ));
 
         let mut string_parser = StringParsingState::new();
         let res = string_parser.scan_token(buffer_pinned).await;

@@ -2,6 +2,7 @@ use core::panic;
 use std::pin::Pin;
 use tokio::sync::{Mutex, Semaphore};
 
+/// The buffer reads chunks of data at a time and adds it to an internal queue.
 pub type BufferChunk = Vec<char>;
 
 /// Stores a buffer of incoming characters as a vector of strings (in `Vec<char>` form).
