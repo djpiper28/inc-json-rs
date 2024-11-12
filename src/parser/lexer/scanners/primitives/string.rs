@@ -189,7 +189,7 @@ mod test_string {
     use std::borrow::BorrowMut;
 
     #[tokio::test]
-    pub async fn test_string_scan_valid_base_case() {
+    async fn test_string_scan_valid_base_case() {
         let mut buffer = Buffer::new();
 
         // This seems really convoluted to be hoenst
@@ -219,7 +219,7 @@ mod test_string {
     }
 
     #[tokio::test]
-    pub async fn test_string_scan_valid_with_escaped_quote() {
+    async fn test_string_scan_valid_with_escaped_quote() {
         let mut buffer = Buffer::new();
 
         // This seems really convoluted to be hoenst
