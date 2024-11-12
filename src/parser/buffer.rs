@@ -125,6 +125,25 @@ mod test_buffer {
         assert_eq!(c2, 'e');
     }
 
+    #[tokio::test]
+    async fn test_next_char_after_eof_errors() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer.add_data(vec!['h']).await.unwrap();
+
+        buffer.add_data(vec!['e']).await.unwrap();
+
+        let c1 = buffer.next_char().await.unwrap();
+        assert_eq!(c1, 'h');
+
+        let c2 = buffer.next_char().await.unwrap();
+        assert_eq!(c2, 'e');
+
+        buffer.eof().await;
+
+        assert!(buffer.next_char().await.is_err());
+    }
+
     // #[tokio::test]
     // async fn test_next_char_many_buffers_with_wait() {
     //     let mut buf = Buffer::new();
