@@ -64,12 +64,9 @@ impl Buffer {
             };
 
             if at_end_of_current_buffer {
-                match self.sem.acquire().await {
-                    Ok(_) => {}
-                    Err(_) => {
-                        panic!("Illegal State");
-                    }
-                };
+                if self.sem.acquire().await.is_err() {
+                    return Err("Cannot unlock semaphore - EOF probably");
+                }
 
                 data.current_buffer_idx = 0;
                 data.buffers.remove(0);
