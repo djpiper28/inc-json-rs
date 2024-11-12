@@ -178,3 +178,25 @@ impl StringParsingState {
         return Err("Exceeded maximum length");
     }
 }
+
+#[cfg(test)]
+mod test_string {
+    use std::borrow::BorrowMut;
+
+    use super::*;
+
+    #[tokio::test]
+    pub async fn test_string_scan_valid_base_case() {
+        let mut buffer = Buffer::new();
+
+        // This seems really convoluted to be hoenst
+        assert!(!buffer.add_data("\"Hello world!\"".to_string().chars().into_iter().clone().collect::<Vec<char>>()).await.is_err());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+
+        let mut string_parser = StringParsingState::new();
+        let res= string_parser.scan_token(buffer_pinned).await;
+
+        assert!(!res.is_err());
+    }
+}
