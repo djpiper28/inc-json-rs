@@ -1,4 +1,3 @@
-use super::json_path::JsonPath;
 use core::panic;
 use std::pin::Pin;
 use tokio::sync::{Mutex, Semaphore};
@@ -14,7 +13,6 @@ pub struct Buffer {
 struct BufferInternalData {
     buffers: Vec<BufferChunk>,
     current_buffer_idx: usize,
-    current_path: JsonPath,
     /// Whether or not there is more data to be expected after the end of the buffer.
     eof: bool,
 }
@@ -25,7 +23,6 @@ impl Buffer {
         Buffer {
             data: Mutex::new(BufferInternalData {
                 buffers: Vec::new(),
-                current_path: Vec::new(),
                 current_buffer_idx: 0,
                 eof: false,
             }),
