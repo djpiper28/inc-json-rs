@@ -13,7 +13,7 @@ use primitives::{
     string::{is_first_char_of_string, scan_string_token},
 };
 use std::boxed::Box;
-use std::{borrow::Borrow, pin::Pin};
+use std::pin::Pin;
 
 pub mod array;
 pub mod common;
