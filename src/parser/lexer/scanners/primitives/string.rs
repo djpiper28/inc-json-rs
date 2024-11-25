@@ -100,18 +100,14 @@ impl StringParsingState {
                         Ok(())
                     }
                     '/' => {
-                        // TODO: check this
-                        // https://english.stackexchange.com/questions/10993/what-is-the-difference-between-solidus-and-slash#10996
-                        self.token.add_char('⁄');
+                        self.token.add_char('\u{002F}');
                         Ok(())
                     }
                     'b' => {
-                        // TODO: check this
                         self.token.add_char('\u{0008}');
                         Ok(())
                     }
                     'f' => {
-                        // TODO: check this
                         self.token.add_char('\u{000C}');
                         Ok(())
                     }
