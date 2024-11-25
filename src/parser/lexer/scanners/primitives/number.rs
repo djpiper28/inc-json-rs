@@ -5,6 +5,7 @@ use crate::parser::{
         tokens::{number_token::NumberToken, whitespace_token::is_whitespace},
     },
 };
+use core::panicking::panic;
 use std::{char, pin::Pin};
 
 pub fn is_first_char_of_number(c: char) -> bool {
@@ -17,12 +18,21 @@ pub fn is_first_char_of_number(c: char) -> bool {
 }
 
 const NOT_SET: i64 = -1;
+const TEN: f64 = 10.0;
 
 struct NumberParsingState {
     parts: [i64; 3],
     current_part: usize,
     number_negative: bool,
     exponent_negative: bool,
+}
+
+fn as_sign_multiplier(is_negative: bool) -> i64 {
+    if is_negative {
+        return -1;
+    } else {
+        return 1;
+    }
 }
 
 impl NumberParsingState {
@@ -33,6 +43,41 @@ impl NumberParsingState {
             number_negative: false,
             exponent_negative: false,
         };
+    }
+
+    fn as_number_token(&self) -> NumberToken {
+        let base = self.parts[0] * as_sign_multiplier(self.number_negative);
+
+        let decimal_part_as_int = self.parts[2];
+        let mut decimal_part = decimal_part_as_int as f64;
+
+        if self.current_part > 0 && decimal_part_as_int == NOT_SET {
+            panic!("Corrupt state of number parser - part[1] is not set")
+        }
+
+        match self.current_part {
+            0 => {
+                return NumberToken::Integer(base);
+            }
+            1 => {
+                while decimal_part > 1.0 {
+                    decimal_part /= TEN;
+                }
+
+                return NumberToken::Float(base as f64 + decimal_part);
+            }
+            2 => {
+                while decimal_part > 1.0 {
+                    decimal_part /= TEN;
+                }
+
+                let exponent_multiplier = TEN.powf(
+                    (self.parts[2] as f64) * (as_sign_multiplier(self.exponent_negative) as f64),
+                );
+                return NumberToken::Float(base as f64 + decimal_part * exponent_multiplier);
+            }
+            _ => panic!("Corrupt state of number parser - current_part is > 2"),
+        }
     }
 
     /**
@@ -142,9 +187,7 @@ impl NumberParsingState {
             if parse_state.is_some() {
                 return match parse_state {
                     Some(NumberParseTerminationReason::Fatal(x)) => Err(x),
-                    Some(NumberParseTerminationReason::EndOfNumber) => {
-                        Ok(NumberToken::Integer(123))
-                    }
+                    Some(NumberParseTerminationReason::EndOfNumber) => Ok(self.as_number_token()),
                     _ => Err("An unknown error occurred"),
                 };
             }
