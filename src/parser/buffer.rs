@@ -51,6 +51,7 @@ impl Buffer {
     pub async fn replace_char(&mut self, c: char) {
         let mut data = self.data.lock().await;
 
+        // TODO: this is a bit crap and should be done differently
         let mut new_buffer = Vec::new();
         new_buffer.push(c);
 
