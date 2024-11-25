@@ -219,6 +219,17 @@ mod test_buffer {
         assert!(buffer.next_char().await.is_err());
     }
 
+    #[tokio::test]
+    async fn test_replacement_empty_queue() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+
+        buffer.replace_char('a').await;
+
+        let c1 = buffer.next_char().await;
+        assert_eq!(c1.unwrap(), 'a');
+    }
+
     // #[tokio::test]
     // async fn test_next_char_many_buffers_with_wait() {
     //     let mut buf = Buffer::new();
