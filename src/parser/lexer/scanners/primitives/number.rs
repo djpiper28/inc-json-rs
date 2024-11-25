@@ -5,7 +5,6 @@ use crate::parser::{
         tokens::{number_token::NumberToken, whitespace_token::is_whitespace},
     },
 };
-use core::panicking::panic;
 use std::{char, pin::Pin};
 
 pub fn is_first_char_of_number(c: char) -> bool {
@@ -214,6 +213,7 @@ pub async fn scan_number_token(
 #[cfg(test)]
 mod test_number_primitive {
     use super::*;
+    use std::borrow::BorrowMut;
 
     #[test]
     fn test_is_first_char_of_number_digit() {
@@ -232,5 +232,115 @@ mod test_number_primitive {
     #[test]
     fn test_is_first_char_of_number_minus() {
         assert!(is_first_char_of_number('-'))
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_base_case_with_first_char_read() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "123,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+
+        assert!(is_first_char_of_number(
+            buffer_pinned.next_char().await.unwrap()
+        ));
+
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_base_case_ends_with_comma() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "23,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_base_case_ends_with_object_end() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "23}"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_base_case_ends_with_array_end() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "23]"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_base_case_ends_with_whitespace() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "23         ]"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(123));
     }
 }

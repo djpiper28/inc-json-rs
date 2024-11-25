@@ -55,7 +55,19 @@ impl Buffer {
         let mut new_buffer = Vec::new();
         new_buffer.push(c);
 
+        if !data.buffers.is_empty() {
+            let mut i = data.current_buffer_idx;
+            while i < data.buffers[0].len() {
+                new_buffer.push(data.buffers[0][i]);
+
+                i += 1
+            }
+
+            data.buffers.remove(0);
+        }
+
         data.buffers.insert(0, new_buffer);
+        data.current_buffer_idx = 0;
         self.sem.add_permits(1);
     }
 
