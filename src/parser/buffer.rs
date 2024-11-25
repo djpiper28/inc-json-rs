@@ -155,6 +155,9 @@ mod test_buffer {
 
         let c3 = buffer.next_char().await.unwrap();
         assert_eq!(c3, 'e');
+
+        let c4 = buffer.next_char().await.unwrap();
+        assert_eq!(c4, 'l');
     }
 
     #[tokio::test]
