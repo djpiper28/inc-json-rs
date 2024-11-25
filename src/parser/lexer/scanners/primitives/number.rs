@@ -95,6 +95,10 @@ impl NumberParsingState {
             }
             c if is_whitespace(c) => None,
             '0'..'9' => {
+                if self.parts[self.current_part] == NOT_SET {
+                    self.parts[self.current_part] = 0;
+                }
+
                 self.parts[self.current_part] *= 10;
                 // This is known safe
                 self.parts[self.current_part] += c.to_digit(10).unwrap() as i64;
