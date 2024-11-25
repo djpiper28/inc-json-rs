@@ -219,7 +219,7 @@ mod test_string {
     }
 
     #[tokio::test]
-    async fn test_string_scan_valid_with_escaped_quote() {
+    async fn test_string_scan_valid_escaped_quote() {
         let mut buffer = Buffer::new();
 
         // This seems really convoluted to be hoenst
@@ -288,5 +288,35 @@ mod test_string {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap().as_string(), "Hello ➽ do you like unicode?");
+    }
+
+    #[tokio::test]
+    async fn test_string_scan_valid_escaped_backslash() {
+        let mut buffer = Buffer::new();
+
+        // This seems really convoluted to be hoenst
+        assert!(buffer
+            .add_data(
+                "\">>\\\\<<\""
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+
+        assert!(is_first_char_of_string(
+            buffer_pinned.next_char().await.unwrap()
+        ));
+
+        let mut string_parser = StringParsingState::new();
+        let res = string_parser.scan_token(buffer_pinned).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().as_string(), ">>\\<<");
     }
 }
