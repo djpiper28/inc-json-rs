@@ -11,7 +11,7 @@ pub fn is_first_char_of_string(c: char) -> bool {
     }
 }
 
-pub struct StringParsingState {
+struct StringParsingState {
     token: StringToken,
 }
 
@@ -86,46 +86,44 @@ impl StringParsingState {
     ) -> Result<(), &'static str> {
         match buffer.next_char().await {
             Err(x) => Err(x),
-            Ok(first_char) => {
-                match first_char {
-                    'u' => {
-                        return self.parse_unicode_escape_sequence(buffer).await;
-                    }
-                    '"' => {
-                        self.token.add_char('"');
-                        Ok(())
-                    }
-                    '\\' => {
-                        self.token.add_char('\\');
-                        Ok(())
-                    }
-                    '/' => {
-                        self.token.add_char('\u{002F}');
-                        Ok(())
-                    }
-                    'b' => {
-                        self.token.add_char('\u{0008}');
-                        Ok(())
-                    }
-                    'f' => {
-                        self.token.add_char('\u{000C}');
-                        Ok(())
-                    }
-                    'n' => {
-                        self.token.add_char('\n');
-                        Ok(())
-                    }
-                    'r' => {
-                        self.token.add_char('\r');
-                        Ok(())
-                    }
-                    't' => {
-                        self.token.add_char('\t');
-                        Ok(())
-                    }
-                    _ => Err("Not a valid escape sequence"),
+            Ok(first_char) => match first_char {
+                'u' => {
+                    return self.parse_unicode_escape_sequence(buffer).await;
                 }
-            }
+                '"' => {
+                    self.token.add_char('"');
+                    Ok(())
+                }
+                '\\' => {
+                    self.token.add_char('\\');
+                    Ok(())
+                }
+                '/' => {
+                    self.token.add_char('\u{002F}');
+                    Ok(())
+                }
+                'b' => {
+                    self.token.add_char('\u{0008}');
+                    Ok(())
+                }
+                'f' => {
+                    self.token.add_char('\u{000C}');
+                    Ok(())
+                }
+                'n' => {
+                    self.token.add_char('\n');
+                    Ok(())
+                }
+                'r' => {
+                    self.token.add_char('\r');
+                    Ok(())
+                }
+                't' => {
+                    self.token.add_char('\t');
+                    Ok(())
+                }
+                _ => Err("Not a valid escape sequence"),
+            },
         }
     }
 
@@ -145,11 +143,7 @@ impl StringParsingState {
         }
     }
 
-    /// This reads from the first char of the string
-    /// For example `"abcdef..."`: `a` in the example is the first char
-    /// Until the end of the string. The first char is expected to be read from
-    /// `is_first_char_of_string()`
-    pub async fn scan_token(
+    async fn scan(
         &mut self,
         buffer: &mut Pin<Box<&mut Buffer>>,
     ) -> Result<StringToken, &'static str> {
@@ -177,6 +171,18 @@ impl StringParsingState {
 
         return Err("Exceeded maximum length");
     }
+}
+
+/**
+* This reads from the first char of the string
+* For example `"abcdef..."`: `a` in the example is the first char
+* Until the end of the string. The first char is expected to be read from
+* `is_first_char_of_string()`
+*/
+pub async fn scan_string_token(
+    buffer: &mut Pin<Box<&mut Buffer>>,
+) -> Result<StringToken, &'static str> {
+    return StringParsingState::new().scan(buffer).await;
 }
 
 #[cfg(test)]
@@ -207,8 +213,7 @@ mod test_string {
             buffer_pinned.next_char().await.unwrap()
         ));
 
-        let mut string_parser = StringParsingState::new();
-        let res = string_parser.scan_token(buffer_pinned).await;
+        let res = scan_string_token(buffer_pinned).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap().as_string(), "Hello world!");
@@ -246,8 +251,7 @@ mod test_string {
             buffer_pinned.next_char().await.unwrap()
         ));
 
-        let mut string_parser = StringParsingState::new();
-        let res = string_parser.scan_token(buffer_pinned).await;
+        let res = scan_string_token(buffer_pinned).await;
 
         assert!(res.is_ok());
         assert_eq!(
@@ -279,8 +283,7 @@ mod test_string {
             buffer_pinned.next_char().await.unwrap()
         ));
 
-        let mut string_parser = StringParsingState::new();
-        let res = string_parser.scan_token(buffer_pinned).await;
+        let res = scan_string_token(buffer_pinned).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap().as_string(), "Hello ➽ do you like unicode?");
@@ -309,8 +312,7 @@ mod test_string {
             buffer_pinned.next_char().await.unwrap()
         ));
 
-        let mut string_parser = StringParsingState::new();
-        let res = string_parser.scan_token(buffer_pinned).await;
+        let res = scan_string_token(buffer_pinned).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap().as_string(), ">>\\<<");

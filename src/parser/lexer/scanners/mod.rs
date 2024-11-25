@@ -10,7 +10,7 @@ use primitives::{
     boolean::is_first_char_of_boolean,
     null::is_first_char_of_null,
     number::is_first_char_of_number,
-    string::{is_first_char_of_string, StringParsingState},
+    string::{is_first_char_of_string, scan_string_token},
 };
 use std::boxed::Box;
 use std::{borrow::Borrow, pin::Pin};
@@ -43,8 +43,7 @@ async fn scan_token(
     } else if is_first_char_of_number(c) {
         todo!("Check that is is actually a number, and what it is");
     } else if is_first_char_of_string(c) {
-        let mut string_scanner = StringParsingState::new();
-        return match string_scanner.scan_token(buffer).await {
+        return match scan_string_token(buffer).await {
             Ok(x) => Ok(JsonToken::String(x)),
             Err(x) => Err(x),
         };
