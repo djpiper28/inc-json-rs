@@ -50,8 +50,6 @@ impl Buffer {
 
     pub async fn replace_char(&mut self, c: char) {
         let mut data = self.data.lock().await;
-
-        // TODO: this is a bit crap and should be done differently
         let mut new_buffer = Vec::new();
         new_buffer.push(c);
 
@@ -136,6 +134,27 @@ mod test_buffer {
 
         let c2 = buffer.next_char().await.unwrap();
         assert_eq!(c2, 'e');
+    }
+
+    #[tokio::test]
+    async fn test_next_char_single_with_replacement() {
+        let mut buf = Buffer::new();
+        let mut buffer = Box::pin(buf.borrow_mut());
+        buffer
+            .add_data(vec!['h', 'e', 'l', 'l', 'o'])
+            .await
+            .unwrap();
+
+        let c1 = buffer.next_char().await.unwrap();
+        assert_eq!(c1, 'h');
+
+        let c2 = buffer.next_char().await.unwrap();
+        assert_eq!(c2, 'e');
+
+        buffer.replace_char('e').await;
+
+        let c3 = buffer.next_char().await.unwrap();
+        assert_eq!(c3, 'e');
     }
 
     #[tokio::test]
