@@ -48,6 +48,16 @@ impl Buffer {
         self.sem.add_permits(1);
     }
 
+    pub async fn replace_char(&mut self, c: char) {
+        let mut data = self.data.lock().await;
+
+        let mut new_buffer = Vec::new();
+        new_buffer.push(c);
+
+        data.buffers.insert(0, new_buffer);
+        self.sem.add_permits(1);
+    }
+
     pub async fn next_char(self: &mut Pin<Box<&mut Self>>) -> Result<char, &'static str> {
         loop {
             let mut data = self.data.lock().await;

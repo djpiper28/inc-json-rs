@@ -1,6 +1,6 @@
 const OBJECT_VALUE_INDICATOR: char = ':';
 const OBJECT_START: char = '{';
-const OBJECT_END: char = '}';
+pub const OBJECT_END: char = '}';
 
 pub fn is_first_char_of_object_start(c: char) -> bool {
     return c == OBJECT_START;
