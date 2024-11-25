@@ -74,8 +74,6 @@ pub async fn scan_token(buffer: &mut Pin<Box<&mut Buffer>>) -> Result<NumberToke
             };
         }
     }
-
-    return Ok(NumberToken::Integer(7));
 }
 
 #[cfg(test)]
