@@ -24,11 +24,25 @@ impl StringToken {
 mod test_string_token {
     use super::*;
 
-    const TEST_DATA: &str = "Hello world!";
-
     #[test]
     fn test_as_string() {
         let mut string_token = StringToken::new();
+
+        const TEST_DATA: &str = "Hello world!";
+
+        for c in TEST_DATA.chars() {
+            string_token.add_char(c);
+        }
+
+        let as_string = string_token.as_string();
+        assert_eq!(as_string, TEST_DATA);
+    }
+
+    #[test]
+    fn test_uncode_chars_as_string() {
+        let mut string_token = StringToken::new();
+
+        const TEST_DATA: &str = "🤠 Howdy partner 🤠.";
 
         for c in TEST_DATA.chars() {
             string_token.add_char(c);

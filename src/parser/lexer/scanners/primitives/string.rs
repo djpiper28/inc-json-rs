@@ -49,11 +49,11 @@ impl StringParsingState {
         let mut c: u32 = 0;
 
         for i in 0..4 {
-            // index 0 -> 3
-            //       1 -> 2
-            //       2 -> 1
-            //       3 -> 0
-            let offset = 4 - i - 1;
+            // index 0 -> 3 * 4
+            //       1 -> 2 * 4
+            //       2 -> 1 * 4
+            //       3 -> 0 * 4
+            let offset = (4 - i - 1) * 4;
 
             let res: Result<(), &'static str> = match buffer.next_char().await {
                 Err(x) => Err(x),
@@ -258,5 +258,35 @@ mod test_string {
             res.unwrap().as_string(),
             concat!("The man said:", '\"', "you alright govna?", '"')
         );
+    }
+
+    #[tokio::test]
+    async fn test_string_scan_valid_escaped_hex_code() {
+        let mut buffer = Buffer::new();
+
+        // This seems really convoluted to be hoenst
+        assert!(buffer
+            .add_data(
+                "\"Hello \\u27bd do you like unicode?\""
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+
+        assert!(is_first_char_of_string(
+            buffer_pinned.next_char().await.unwrap()
+        ));
+
+        let mut string_parser = StringParsingState::new();
+        let res = string_parser.scan_token(buffer_pinned).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().as_string(), "Hello ➽ do you like unicode?");
     }
 }
