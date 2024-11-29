@@ -145,7 +145,7 @@ impl NumberParsingState {
                 None
             }
             '.' => {
-                if self.current_part == 0 {
+                if self.current_part == 0 && self.parts[0] != NOT_SET {
                     self.current_part += 1;
                     return None;
                 } else {
@@ -346,5 +346,89 @@ mod test_number_primitive {
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
         let ret = scan_number_token('1', buffer_pinned).await;
         assert_eq!(ret.unwrap(), NumberToken::Integer(123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_invalid_first_char() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "bcd"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('a', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_invalid_second_char() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "bcd"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_first_char_is_decimal() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "222"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('.', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_first_char_is_exponent() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "222"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('e', buffer_pinned).await;
+        assert!(ret.is_err());
     }
 }
