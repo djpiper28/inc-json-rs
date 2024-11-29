@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, pin::Pin};
+use std::pin::Pin;
 use tokio::sync::{Mutex, Semaphore};
 
 /// The buffer reads chunks of data at a time and adds it to an internal queue.
