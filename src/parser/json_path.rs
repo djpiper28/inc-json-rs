@@ -83,6 +83,10 @@ mod test_string_token {
                 ObjectConsumer::new()
                     .primitive("id".to_string(), example_primitive_consumer)
                     .primitive("user_name".to_string(), example_primitive_consumer),
+            )
+            .array(
+                "friends".to_string(),
+                UnknownConsumer::PrimitiveConsumer(example_primitive_consumer),
             );
     }
 }
