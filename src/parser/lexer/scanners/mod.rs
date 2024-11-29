@@ -7,7 +7,7 @@ use object::{
     is_first_char_of_object_value_indicator,
 };
 use primitives::{
-    boolean::is_first_char_of_boolean,
+    boolean::{is_first_char_of_boolean, scan_boolean_token},
     null::{is_first_char_of_null, scan_null_token},
     number::{is_first_char_of_number, scan_number_token},
     string::{is_first_char_of_string, scan_string_token},
@@ -42,7 +42,10 @@ async fn scan_token(
             Err(x) => Err(x),
         }
     } else if is_first_char_of_boolean(c) {
-        todo!("Check that it is actually a boolean, and what it is");
+        return match scan_boolean_token(c, buffer).await {
+            Ok(x) => Ok(JsonToken::Boolean(x)),
+            Err(x) => Err(x),
+        }
     } else if is_first_char_of_number(c) {
         return match scan_number_token(c, buffer).await {
             Ok(x) => Ok(JsonToken::Number(x)),
