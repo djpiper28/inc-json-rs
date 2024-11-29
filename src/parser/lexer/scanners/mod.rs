@@ -8,8 +8,8 @@ use object::{
 };
 use primitives::{
     boolean::is_first_char_of_boolean,
-    null::is_first_char_of_null,
-    number::is_first_char_of_number,
+    null::{is_first_char_of_null, scan_null_token},
+    number::{is_first_char_of_number, scan_number_token},
     string::{is_first_char_of_string, scan_string_token},
 };
 use std::boxed::Box;
@@ -37,11 +37,17 @@ async fn scan_token(
     } else if is_first_char_of_comma(c) {
         return Ok(JsonToken::Comma);
     } else if is_first_char_of_null(c) {
-        todo!("Check that it is actually null");
+        return match scan_null_token(buffer).await {
+            Ok(_) => Ok(JsonToken::Null),
+            Err(x) => Err(x),
+        }
     } else if is_first_char_of_boolean(c) {
         todo!("Check that it is actually a boolean, and what it is");
     } else if is_first_char_of_number(c) {
-        todo!("Check that is is actually a number, and what it is");
+        return match scan_number_token(c, buffer).await {
+            Ok(x) => Ok(JsonToken::Number(x)),
+            Err(x) => Err(x),
+        }
     } else if is_first_char_of_string(c) {
         return match scan_string_token(buffer).await {
             Ok(x) => Ok(JsonToken::String(x)),
