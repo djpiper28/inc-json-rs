@@ -1,6 +1,6 @@
 use std::string::String;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StringToken {
     value: Vec<char>,
 }
@@ -8,6 +8,17 @@ pub struct StringToken {
 impl StringToken {
     pub fn new() -> Self {
         return StringToken { value: Vec::new() };
+    }
+
+    pub fn from(s: &'static str) -> Self {
+        return StringToken {
+            value: s
+                .to_string()
+                .chars()
+                .into_iter()
+                .clone()
+                .collect::<Vec<char>>(),
+        };
     }
 
     pub fn as_string(self) -> String {

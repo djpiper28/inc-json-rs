@@ -5,6 +5,7 @@ pub mod number_token;
 pub mod string_token;
 pub mod whitespace_token;
 
+#[derive(PartialEq, Debug)]
 pub enum JsonToken {
     Whitespace,
     Null,

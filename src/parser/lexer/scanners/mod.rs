@@ -1,4 +1,4 @@
-use super::tokens::JsonToken;
+use super::tokens::{whitespace_token::is_whitespace, JsonToken};
 use crate::parser::buffer::Buffer;
 use array::{is_first_char_of_array_end, is_first_char_of_array_start};
 use common::is_first_char_of_comma;
@@ -64,8 +64,259 @@ async fn scan_token(
 pub async fn next_token(buffer: &mut Pin<Box<&mut Buffer>>) -> Result<JsonToken, &'static str> {
     match buffer.next_char().await {
         Ok(c) => {
+            if is_whitespace(c) {
+                return Box::pin(next_token(buffer)).await;
+            }
             return scan_token(c, buffer).await;
         }
         Err(x) => Err(x),
+    }
+}
+
+
+#[cfg(test)]
+mod test_null_primitive {
+    use super::*;
+    use crate::parser::lexer::tokens::{number_token::NumberToken, string_token::StringToken};
+    use std::borrow::BorrowMut;
+
+    #[tokio::test]
+    async fn test_next_token_boolean() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "true"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Boolean(true));
+    }
+
+    #[tokio::test]
+    async fn test_next_token_number() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "123,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Number(NumberToken::Integer(123)));
+    }
+
+    #[tokio::test]
+    async fn test_next_token_string() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                concat!('"', "Hello world", '"')
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::String(StringToken::from("Hello world")));
+    }
+
+    #[tokio::test]
+    async fn test_next_token_null() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "null"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Null);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_comma() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ","
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Comma);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_object_value_indicator() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ":"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObejectValueIndicator);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_object_start() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "{"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObjectStart);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_object_end() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "}"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObjectEnd);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_array_start() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "["
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ArrayStart);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_array_end() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "]"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ArrayEnd);
+    }
+
+    #[tokio::test]
+    async fn test_next_token_with_whitespace() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "   true"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Boolean(true));
+    }
+
+    #[tokio::test]
+    async fn test_next_token_with_error() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".123"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        assert!(next_token(buffer_pinned).await.is_err());
     }
 }
