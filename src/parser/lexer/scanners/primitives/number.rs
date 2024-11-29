@@ -47,11 +47,18 @@ impl NumberParsingState {
     fn as_number_token(&self) -> NumberToken {
         let base = self.parts[0] * as_sign_multiplier(self.number_negative);
 
-        let decimal_part_as_int = self.parts[2];
+        let decimal_part_as_int = self.parts[1];
         let mut decimal_part = decimal_part_as_int as f64;
 
         if self.current_part > 0 && decimal_part_as_int == NOT_SET {
             panic!("Corrupt state of number parser - part[1] is not set")
+        }
+
+        if self.current_part > 0 {
+            while decimal_part > 1.0 {
+                decimal_part /= TEN;
+            }
+            decimal_part *= as_sign_multiplier(self.number_negative) as f64;
         }
 
         match self.current_part {
@@ -59,17 +66,9 @@ impl NumberParsingState {
                 return NumberToken::Integer(base);
             }
             1 => {
-                while decimal_part > 1.0 {
-                    decimal_part /= TEN;
-                }
-
                 return NumberToken::Float(base as f64 + decimal_part);
             }
             2 => {
-                while decimal_part > 1.0 {
-                    decimal_part /= TEN;
-                }
-
                 let exponent_multiplier = TEN.powf(
                     (self.parts[2] as f64) * (as_sign_multiplier(self.exponent_negative) as f64),
                 );
@@ -140,13 +139,13 @@ impl NumberParsingState {
                         "The post-decimal part of the number cannot have a sign",
                     ));
                 } else {
-                    self.exponent_negative = true;
+                    self.exponent_negative = false;
                 }
                 None
             }
             '.' => {
                 if self.current_part == 0 && self.parts[0] != NOT_SET {
-                    self.current_part += 1;
+                    self.current_part = 1;
                     return None;
                 } else {
                     return Some(NumberParseTerminationReason::Fatal(
@@ -349,6 +348,69 @@ mod test_number_primitive {
     }
 
     #[tokio::test]
+    async fn test_scan_number_token_negative_int() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "123,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('-', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Integer(-123));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_float() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".23,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(1.23));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_negative_float() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "5.12,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('-', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(-5.12));
+    }
+
+    #[tokio::test]
     async fn test_scan_number_token_invalid_first_char() {
         let mut buffer = Buffer::new();
 
@@ -366,6 +428,69 @@ mod test_number_primitive {
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
         let ret = scan_number_token('a', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_invalid_plus_sign_first_char() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "123"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('+', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_negative_after_decimal() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".-23"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_plus_after_decimal() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".+23"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
         assert!(ret.is_err());
     }
 

@@ -4,6 +4,8 @@ pub enum NumberToken {
     Float(f64),
 }
 
+const EQ_THRESHOLD: f64 = 0.0001;
+
 impl PartialEq for NumberToken {
     fn eq(&self, other: &Self) -> bool {
         match self {
@@ -11,7 +13,10 @@ impl PartialEq for NumberToken {
                 Self::Integer(y) => x == y,
                 _ => false,
             },
-            _ => false,
+            Self::Float(x) => match other {
+                Self::Float(y) => (x - y).abs() < EQ_THRESHOLD,
+                _ => false,
+            },
         }
     }
 }
