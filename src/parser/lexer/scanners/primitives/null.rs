@@ -23,7 +23,7 @@ async fn scan_null_token_r(
         Ok(x) if x == NULL[i] => {
             return Box::pin(scan_null_token_r(buffer, i + 1)).await;
         }
-        Ok(_) => Err("Expected a u for null"),
+        Ok(_) => Err("Unexpected char"),
         Err(x) => Err(x),
 
     }
