@@ -44,15 +44,19 @@ impl NumberParsingState {
         };
     }
 
-    fn as_number_token(&self) -> NumberToken {
+    fn as_number_token(&self) -> Result<NumberToken, &'static str> {
+        let mut i = 0;
+        while i <= self.current_part {
+            if self.parts[i] == NOT_SET {
+                return Err("Missing parts of the number");
+            }
+            i+=1;
+        }
+
         let base = self.parts[0] * as_sign_multiplier(self.number_negative);
 
         let decimal_part_as_int = self.parts[1];
         let mut decimal_part = decimal_part_as_int as f64;
-
-        if self.current_part > 0 && decimal_part_as_int == NOT_SET {
-            panic!("Corrupt state of number parser - part[1] is not set")
-        }
 
         if self.current_part > 0 {
             while decimal_part > 1.0 {
@@ -63,16 +67,16 @@ impl NumberParsingState {
 
         match self.current_part {
             0 => {
-                return NumberToken::Integer(base);
+                return Ok(NumberToken::Integer(base));
             }
             1 => {
-                return NumberToken::Float(base as f64 + decimal_part);
+                return Ok(NumberToken::Float(base as f64 + decimal_part));
             }
             2 => {
                 let exponent_multiplier = TEN.powf(
                     (self.parts[2] as f64) * (as_sign_multiplier(self.exponent_negative) as f64),
                 );
-                return NumberToken::Float(base as f64 + decimal_part * exponent_multiplier);
+                return Ok(NumberToken::Float((base as f64 + decimal_part) * exponent_multiplier));
             }
             _ => panic!("Corrupt state of number parser - current_part is > 2"),
         }
@@ -189,7 +193,7 @@ impl NumberParsingState {
             if parse_state.is_some() {
                 return match parse_state {
                     Some(NumberParseTerminationReason::Fatal(x)) => Err(x),
-                    Some(NumberParseTerminationReason::EndOfNumber) => Ok(self.as_number_token()),
+                    Some(NumberParseTerminationReason::EndOfNumber) => self.as_number_token(),
                     _ => Err("An unknown error occurred"),
                 };
             }
@@ -411,6 +415,90 @@ mod test_number_primitive {
     }
 
     #[tokio::test]
+    async fn test_scan_number_token_base_exponent_case() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".23e4,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(1.23 * TEN.powf(4.0)));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_exponent_negative_number() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "1.23e4,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('-', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(-1.23 * TEN.powf(4.0)));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_exponent_positive_sign() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".23e+4,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(1.23 * TEN.powf(4.0)));
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_token_exponent_negative_sign() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                ".23e-4,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert_eq!(ret.unwrap(), NumberToken::Float(1.23 * TEN.powf(-4.0)));
+    }
+
+    #[tokio::test]
     async fn test_scan_number_token_invalid_first_char() {
         let mut buffer = Buffer::new();
 
@@ -554,6 +642,48 @@ mod test_number_primitive {
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
         let ret = scan_number_token('e', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_no_numbers_after_decimal() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "2.,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
+        assert!(ret.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scan_number_no_numbers_after_exponent() {
+        let mut buffer = Buffer::new();
+
+        assert!(buffer
+            .add_data(
+                "2.2e,"
+                    .to_string()
+                    .chars()
+                    .into_iter()
+                    .clone()
+                    .collect::<Vec<char>>()
+            )
+            .await
+            .is_ok());
+
+        let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
+        let ret = scan_number_token('1', buffer_pinned).await;
         assert!(ret.is_err());
     }
 }
