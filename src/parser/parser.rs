@@ -2,8 +2,8 @@ use std::pin::Pin;
 
 use super::{
     buffer::Buffer,
-    json_path::{self, ObjectConsumer},
-    lexer::scanners::scan_token,
+    json_path::ObjectConsumer,
+    lexer::{scanners::scan_token, tokens::JsonToken},
 };
 
 pub struct Parser {
@@ -23,7 +23,19 @@ impl Parser {
 
             let res = match buffer.next_char().await {
                 Ok(c) => match scan_token(c, buffer).await {
-                    Ok(_) => todo!("implement me"),
+                    Ok(token) => match token {
+                        JsonToken::Whitespace => todo!("handle me"),
+                        JsonToken::Null => todo!("handle me"),
+                        JsonToken::Boolean(boolean) => todo!("handle me"),
+                        JsonToken::Number(number) => todo!("handle me"),
+                        JsonToken::String(string) => todo!("handle me"),
+                        JsonToken::ObjectStart => todo!("handle me"),
+                        JsonToken::ObjectEnd => todo!("handle me"),
+                        JsonToken::ObjectValueIndicator => todo!("handle me"),
+                        JsonToken::ArrayStart => todo!("handle me"),
+                        JsonToken::ArrayEnd => todo!("handle me"),
+                        JsonToken::Comma => todo!("handle me"),
+                    },
                     Err(e) => Err(e),
                 },
                 Err(e) => Err(e),

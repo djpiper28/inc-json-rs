@@ -29,7 +29,7 @@ pub async fn scan_token(
     } else if is_first_char_of_object_end(c) {
         return Ok(JsonToken::ObjectEnd);
     } else if is_first_char_of_object_value_indicator(c) {
-        return Ok(JsonToken::ObejectValueIndicator);
+        return Ok(JsonToken::ObjectValueIndicator);
     } else if is_first_char_of_array_start(c) {
         return Ok(JsonToken::ArrayStart);
     } else if is_first_char_of_array_end(c) {
@@ -205,7 +205,7 @@ mod test_null_primitive {
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
         assert_eq!(
             next_token(buffer_pinned).await.unwrap(),
-            JsonToken::ObejectValueIndicator
+            JsonToken::ObjectValueIndicator
         );
     }
 

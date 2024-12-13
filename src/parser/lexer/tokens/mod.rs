@@ -15,7 +15,7 @@ pub enum JsonToken {
     ObjectStart,
     ObjectEnd,
     /// The colon (:) that makes up the "key": "value" of an object entry
-    ObejectValueIndicator,
+    ObjectValueIndicator,
     ArrayStart,
     ArrayEnd,
     Comma,
