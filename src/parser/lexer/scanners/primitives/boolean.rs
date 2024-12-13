@@ -13,8 +13,8 @@ pub fn is_first_char_of_boolean(c: char) -> bool {
 
 async fn scan_boolean_true_r(
     buffer: &mut Pin<Box<&mut Buffer>>,
-    i: usize
-) -> Result<(), &'static str>{
+    i: usize,
+) -> Result<(), &'static str> {
     if i >= BOOLEAN_TRUE.len() {
         return Ok(());
     }
@@ -25,14 +25,13 @@ async fn scan_boolean_true_r(
         }
         Ok(_) => Err("Unexpected char"),
         Err(x) => Err(x),
-
-    }
+    };
 }
 
 async fn scan_boolean_false_r(
     buffer: &mut Pin<Box<&mut Buffer>>,
-    i: usize
-) -> Result<(), &'static str>{
+    i: usize,
+) -> Result<(), &'static str> {
     if i >= BOOLEAN_FALSE.len() {
         return Ok(());
     }
@@ -43,19 +42,18 @@ async fn scan_boolean_false_r(
         }
         Ok(_) => Err("Unexpected char"),
         Err(x) => Err(x),
-
-    }
+    };
 }
 
 pub async fn scan_boolean_token(
     first_char: char,
     buffer: &mut Pin<Box<&mut Buffer>>,
-) -> Result<bool, &'static str>{
+) -> Result<bool, &'static str> {
     return match first_char {
         't' if scan_boolean_true_r(buffer, 0).await.is_ok() => Ok(true),
         'f' if scan_boolean_false_r(buffer, 0).await.is_ok() => Ok(false),
-        _ => Err("Cannot scan boolean")
-    }
+        _ => Err("Cannot scan boolean"),
+    };
 }
 
 #[cfg(test)]
@@ -95,7 +93,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_boolean(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_boolean(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(scan_boolean_token('t', buffer_pinned).await.unwrap());
     }
 
@@ -116,7 +116,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_boolean(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_boolean(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(!scan_boolean_token('f', buffer_pinned).await.unwrap());
     }
 
@@ -137,7 +139,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_boolean(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_boolean(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(scan_boolean_token('f', buffer_pinned).await.is_err());
     }
 }

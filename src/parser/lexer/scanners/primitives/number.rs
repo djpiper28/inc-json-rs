@@ -50,7 +50,7 @@ impl NumberParsingState {
             if self.parts[i] == NOT_SET {
                 return Err("Missing parts of the number");
             }
-            i+=1;
+            i += 1;
         }
 
         let base = self.parts[0] * as_sign_multiplier(self.number_negative);
@@ -76,7 +76,9 @@ impl NumberParsingState {
                 let exponent_multiplier = TEN.powf(
                     (self.parts[2] as f64) * (as_sign_multiplier(self.exponent_negative) as f64),
                 );
-                return Ok(NumberToken::Float((base as f64 + decimal_part) * exponent_multiplier));
+                return Ok(NumberToken::Float(
+                    (base as f64 + decimal_part) * exponent_multiplier,
+                ));
             }
             _ => panic!("Corrupt state of number parser - current_part is > 2"),
         }

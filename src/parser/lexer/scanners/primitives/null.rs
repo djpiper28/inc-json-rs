@@ -13,8 +13,8 @@ pub fn is_first_char_of_null(c: char) -> bool {
 
 async fn scan_null_token_r(
     buffer: &mut Pin<Box<&mut Buffer>>,
-    i: usize
-) -> Result<(), &'static str>{
+    i: usize,
+) -> Result<(), &'static str> {
     if i >= NULL.len() {
         return Ok(());
     }
@@ -25,13 +25,10 @@ async fn scan_null_token_r(
         }
         Ok(_) => Err("Unexpected char"),
         Err(x) => Err(x),
-
-    }
+    };
 }
 
-pub async fn scan_null_token(
-    buffer: &mut Pin<Box<&mut Buffer>>,
-) -> Result<(), &'static str>{
+pub async fn scan_null_token(buffer: &mut Pin<Box<&mut Buffer>>) -> Result<(), &'static str> {
     return scan_null_token_r(buffer, 0).await;
 }
 
@@ -67,7 +64,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_null(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_null(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(scan_null_token(buffer_pinned).await.is_ok());
     }
 
@@ -88,7 +87,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_null(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_null(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(scan_null_token(buffer_pinned).await.is_err());
     }
 
@@ -109,7 +110,9 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert!(is_first_char_of_null(buffer_pinned.next_char().await.unwrap()));
+        assert!(is_first_char_of_null(
+            buffer_pinned.next_char().await.unwrap()
+        ));
         assert!(scan_null_token(buffer_pinned).await.is_err());
     }
 }

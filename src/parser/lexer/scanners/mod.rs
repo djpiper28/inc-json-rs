@@ -20,7 +20,7 @@ pub mod common;
 pub mod object;
 pub mod primitives;
 
-async fn scan_token(
+pub async fn scan_token(
     c: char,
     buffer: &mut Pin<Box<&mut Buffer>>,
 ) -> Result<JsonToken, &'static str> {
@@ -40,17 +40,17 @@ async fn scan_token(
         return match scan_null_token(buffer).await {
             Ok(_) => Ok(JsonToken::Null),
             Err(x) => Err(x),
-        }
+        };
     } else if is_first_char_of_boolean(c) {
         return match scan_boolean_token(c, buffer).await {
             Ok(x) => Ok(JsonToken::Boolean(x)),
             Err(x) => Err(x),
-        }
+        };
     } else if is_first_char_of_number(c) {
         return match scan_number_token(c, buffer).await {
             Ok(x) => Ok(JsonToken::Number(x)),
             Err(x) => Err(x),
-        }
+        };
     } else if is_first_char_of_string(c) {
         return match scan_string_token(buffer).await {
             Ok(x) => Ok(JsonToken::String(x)),
@@ -72,7 +72,6 @@ pub async fn next_token(buffer: &mut Pin<Box<&mut Buffer>>) -> Result<JsonToken,
         Err(x) => Err(x),
     }
 }
-
 
 #[cfg(test)]
 mod test_null_primitive {
@@ -97,7 +96,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Boolean(true));
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::Boolean(true)
+        );
     }
 
     #[tokio::test]
@@ -117,7 +119,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Number(NumberToken::Integer(123)));
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::Number(NumberToken::Integer(123))
+        );
     }
 
     #[tokio::test]
@@ -137,7 +142,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::String(StringToken::from("Hello world")));
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::String(StringToken::from("Hello world"))
+        );
     }
 
     #[tokio::test]
@@ -166,8 +174,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                ","
-                    .to_string()
+                ",".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -186,8 +193,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                ":"
-                    .to_string()
+                ":".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -197,7 +203,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObejectValueIndicator);
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::ObejectValueIndicator
+        );
     }
 
     #[tokio::test]
@@ -206,8 +215,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                "{"
-                    .to_string()
+                "{".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -217,7 +225,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObjectStart);
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::ObjectStart
+        );
     }
 
     #[tokio::test]
@@ -226,8 +237,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                "}"
-                    .to_string()
+                "}".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -237,7 +247,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ObjectEnd);
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::ObjectEnd
+        );
     }
 
     #[tokio::test]
@@ -246,8 +259,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                "["
-                    .to_string()
+                "[".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -257,7 +269,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ArrayStart);
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::ArrayStart
+        );
     }
 
     #[tokio::test]
@@ -266,8 +281,7 @@ mod test_null_primitive {
 
         assert!(buffer
             .add_data(
-                "]"
-                    .to_string()
+                "]".to_string()
                     .chars()
                     .into_iter()
                     .clone()
@@ -277,7 +291,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::ArrayEnd);
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::ArrayEnd
+        );
     }
 
     #[tokio::test]
@@ -297,7 +314,10 @@ mod test_null_primitive {
             .is_ok());
 
         let buffer_pinned = &mut Box::pin(buffer.borrow_mut());
-        assert_eq!(next_token(buffer_pinned).await.unwrap(), JsonToken::Boolean(true));
+        assert_eq!(
+            next_token(buffer_pinned).await.unwrap(),
+            JsonToken::Boolean(true)
+        );
     }
 
     #[tokio::test]
