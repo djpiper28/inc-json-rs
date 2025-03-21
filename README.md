@@ -1,6 +1,6 @@
 # `inc-json-rs` An Incremental JSON Parser That Uses Tokio
 
-CURRENT A WIP.
+CURRENTLY A WIP.
 
 ## Why Do I Need This Library?
 
